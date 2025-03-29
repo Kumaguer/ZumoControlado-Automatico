@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controles: ¿A donde quieres dirigirte?</title>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        .controls { display: grid; grid-template-columns: repeat(3, 60px); gap: 10px; justify-content: center; align-items: center; }
+        button { 
+            width: 60px; 
+            height: 60px; 
+            font-size: 24px; 
+            cursor: pointer; 
+            border: none; 
+            background: #ddd; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+        }
+        button:active, .active { background: #bbb; transform: scale(0.95); }
+        .empty { visibility: hidden; }
+    </style>
+</head>
+<body>
+    <h1>Controles: ¿A donde quieres dirigirte?</h1>
+    <div class="controls">
+        <div class="empty"></div>
+        <button id="btn-forward" onclick="sendCommand('forward')">⬆️</button>
+        <div class="empty"></div>
+        <button id="btn-left" onclick="sendCommand('left')">⬅️</button>
+        <div class="empty"></div>
+        <button id="btn-right" onclick="sendCommand('right')">➡️</button>
+        <div class="empty"></div>
+        <button id="btn-backward" onclick="sendCommand('backward')">⬇️</button>
+        <div class="empty"></div>
+    </div>
+    
+    <script>
+        function sendCommand(command) {
+            console.log("Enviando comando:", command);
+            highlightButton(command);
+            // Aquí se enviaría el comando al ESP32 (por ejemplo, con WebSockets o Fetch)
+        }
+        
+        function highlightButton(command) {
+            const buttons = {
+                forward: document.getElementById("btn-forward"),
+                backward: document.getElementById("btn-backward"),
+                left: document.getElementById("btn-left"),
+                right: document.getElementById("btn-right")
+            };
+            
+            Object.values(buttons).forEach(btn => btn.classList.remove("active"));
+            if (buttons[command]) {
+                buttons[command].classList.add("active");
+                setTimeout(() => buttons[command].classList.remove("active"), 200); // Quita la clase después de 200ms
+            }
+        }
+        
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowUp') sendCommand('forward');
+            if (event.key === 'ArrowDown') sendCommand('backward');
+            if (event.key === 'ArrowLeft') sendCommand('left');
+            if (event.key === 'ArrowRight') sendCommand('right');
+        });
+    </script>
+</body>
+</html>
