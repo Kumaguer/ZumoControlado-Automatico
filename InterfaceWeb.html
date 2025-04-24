@@ -1,231 +1,43 @@
+const char* paginaHTML = R"rawliteral(
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Control Carrito Sumo</title>
+  <meta charset="UTF-8">
+  <title>Control de Carro</title>
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      transition: background-color 0.5s ease;
-      background-color: #1e1e1e; /* Desconectado */
-      color: white;
-    }
-
-    h1 {
-      margin-top: 20px;
-    }
-
-    .status {
-      margin-bottom: 20px;
-      padding: 10px 20px;
-      background: #333;
-      border-radius: 8px;
-      display: inline-block;
-    }
-
-    button#connect-btn {
-      margin-bottom: 30px;
-      padding: 12px 24px;
-      font-size: 16px;
-      border: none;
-      border-radius: 10px;
-      background-color: #4CAF50;
-      color: white;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-
-    button#connect-btn:hover {
-      background-color: #45a049;
-    }
-
-    .controls {
-      display: grid;
-      grid-template-columns: repeat(3, 80px);
-      gap: 15px;
-      justify-content: center;
-      align-items: center;
-    }
-
-    button.control-btn {
-      width: 80px;
-      height: 80px;
-      font-size: 30px;
-      cursor: pointer;
-      border: none;
-      background: #555;
-      color: white;
-      border-radius: 12px;
-      transition: background-color 0.2s, transform 0.1s;
-    }
-
-    button.control-btn:active,
-    button.control-btn.active {
-      background-color: #888;
-      transform: scale(0.95);
-    }
-
-    .empty {
-      visibility: hidden;
-    }
+    body { font-family: sans-serif; text-align: center; margin-top: 40px; }
+    button { padding: 10px 20px; margin: 10px; font-size: 18px; }
   </style>
 </head>
 <body>
-  <h1>Control Carrito Sumo</h1>
-  <div class="status" id="status">Desconectado</div>
-  <br />
-  <button id="connect-btn">Conectar</button>
-
-  <div class="controls">
-    <div class="empty"></div>
-    <button class="control-btn" id="btn-forward">⬆️</button>
-    <div class="empty"></div>
-
-    <button class="control-btn" id="btn-left">⬅️</button>
-    <div class="empty"></div>
-    <button class="control-btn" id="btn-right">➡️</button>
-
-    <div class="empty"></div>
-    <button class="control-btn" id="btn-backward">⬇️</button>
-    <div class="empty"></div>
-  </div>
+  <h2>Selecciona el modo de operación:</h2>
+  <button onclick="location.href='/cambiarModo?modo=sumo'">Modo Sumo</button>
+  <button onclick="location.href='/cambiarModo?modo=dirigido'">Modo Dirigido</button>
+  <p id="estado">Modo actual: Cargando...</p>
 
   <script>
-    let bluetoothDevice;
-    let commandCharacteristic;
-
-    const statusEl = document.getElementById('status');
-    const connectBtn = document.getElementById('connect-btn');
-
-    function updateStatus(connected) {
-      statusEl.textContent = connected ? 'Conectado' : 'Desconectado';
-      connectBtn.textContent = connected ? 'Desconectar' : 'Conectar';
-      document.body.style.backgroundColor = connected ? '#004d40' : '#1e1e1e';
-    }
-
-    async function connectBluetooth() {
-      try {
-        bluetoothDevice = await navigator.bluetooth.requestDevice({
-          acceptAllDevices: true,
-          optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb']
-        });
-        const server = await bluetoothDevice.gatt.connect();
-        const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
-        commandCharacteristic = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
-
-        updateStatus(true);
-        showNotification('¡Bluetooth conectado!');
-        bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
-      } catch (error) {
-        console.error(error);
-        alert('Error al conectar: ' + error);
-      }
-    }
-
-    function disconnectBluetooth() {
-      if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-        bluetoothDevice.gatt.disconnect();
-      }
-    }
-
-    function onDisconnected() {
-      updateStatus(false);
-      showNotification('Bluetooth desconectado. Reconectando...');
-      reconnectBluetooth();
-    }
-
-    async function reconnectBluetooth() {
-      if (!bluetoothDevice) return;
-      try {
-        const server = await bluetoothDevice.gatt.connect();
-        const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
-        commandCharacteristic = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
-        updateStatus(true);
-        showNotification('¡Reconectado con éxito!');
-        bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
-      } catch (error) {
-        console.warn('Reconexión fallida, reintentando...');
-        setTimeout(reconnectBluetooth, 3000);
-      }
-    }
-
-    connectBtn.addEventListener('click', () => {
-      if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-        disconnectBluetooth();
-      } else {
-        connectBluetooth();
-      }
+    let modo = "";
+    fetch('/estado').then(r => r.text()).then(t => {
+      document.getElementById('estado').innerText = 'Modo actual: ' + t;
+      modo = t;
     });
 
-    async function sendCommand(command) {
-      if (!commandCharacteristic) return;
-      const encoder = new TextEncoder();
-      await commandCharacteristic.writeValue(encoder.encode(command));
-    }
+    document.addEventListener('keydown', (e) => {
+      if (modo !== 'DIRIGIDO') return;
+      let accion = "";
+      if (e.key === 'w') accion = "avanzar";
+      if (e.key === 's') accion = "retroceder";
+      if (e.key === 'd') accion = "izquierda";
+      if (e.key === 'a') accion = "derecha";
+      if (accion !== "") fetch('/mover?accion=' + accion);
+    });
 
-    const buttons = {
-      forward: document.getElementById('btn-forward'),
-      backward: document.getElementById('btn-backward'),
-      left: document.getElementById('btn-left'),
-      right: document.getElementById('btn-right')
-    };
-
-    function highlightButton(command) {
-      Object.values(buttons).forEach(btn => btn.classList.remove('active'));
-      if (buttons[command]) buttons[command].classList.add('active');
-    }
-
-    function clearHighlight() {
-      Object.values(buttons).forEach(btn => btn.classList.remove('active'));
-    }
-
-    function handleCommand(command) {
-      sendCommand(command);
-      highlightButton(command);
-    }
-
-    document.addEventListener('keydown', event => {
-      switch (event.key) {
-        case 'ArrowUp': handleCommand('forward'); break;
-        case 'ArrowDown': handleCommand('backward'); break;
-        case 'ArrowLeft': handleCommand('left'); break;
-        case 'ArrowRight': handleCommand('right'); break;
+    document.addEventListener('keyup', (e) => {
+      if (modo === 'DIRIGIDO') {
+        fetch('/mover?accion=detener');
       }
     });
-
-    document.addEventListener('keyup', () => {
-      sendCommand('stop');
-      clearHighlight();
-    });
-
-    Object.entries(buttons).forEach(([command, button]) => {
-      button.addEventListener('mousedown', () => handleCommand(command));
-      button.addEventListener('mouseup', () => {
-        sendCommand('stop');
-        clearHighlight();
-      });
-      button.addEventListener('mouseleave', () => {
-        sendCommand('stop');
-        clearHighlight();
-      });
-      button.addEventListener('touchstart', e => { e.preventDefault(); handleCommand(command); });
-      button.addEventListener('touchend', e => { e.preventDefault(); sendCommand('stop'); clearHighlight(); });
-    });
-
-    function showNotification(message) {
-      if (Notification.permission === 'granted') {
-        new Notification(message);
-      } else if (Notification.permission !== 'denied') {
-        Notification.requestPermission().then(permission => {
-          if (permission === 'granted') {
-            new Notification(message);
-          }
-        });
-      }
-    }
   </script>
 </body>
 </html>
+)rawliteral";
